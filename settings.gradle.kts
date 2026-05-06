@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "opentelemetry-appender-tracing-kotlin"
+
