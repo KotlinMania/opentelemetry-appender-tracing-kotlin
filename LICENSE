@@ -1,4 +1,4 @@
-Apache License
+                                 Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
 
@@ -187,7 +187,6 @@ Apache License
       identification within third-party archives.
 
    Copyright [yyyy] [name of copyright owner]
-   Copyright (c) 2026 Sydney Renee and The Solace Project (Kotlin port)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -200,3 +199,8 @@ Apache License
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+------------------------------------------------------------
+
+Kotlin port: Copyright (c) 2026 Sydney Renee and The Solace Project.
+Licensed under the same terms as the upstream Rust crate above.
