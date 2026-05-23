@@ -57,10 +57,18 @@ kotlin {
         binaries.framework { baseName = "OpentelemetryAppenderTracing"; xcf.add(this) }
     }
     iosSimulatorArm64 {
-        binaries.framework { baseName = "OpentelemetryAppenderTracing"; xcf.add(this) }
+        binaries.framework {
+            baseName = "OpentelemetryAppenderTracing"
+            isStatic = true
+            xcf.add(this)
+        }
     }
     iosX64 {
-        binaries.framework { baseName = "OpentelemetryAppenderTracing"; xcf.add(this) }
+        binaries.framework {
+            baseName = "OpentelemetryAppenderTracing"
+            isStatic = true
+            xcf.add(this)
+        }
     }
 
     tvosArm64 {
