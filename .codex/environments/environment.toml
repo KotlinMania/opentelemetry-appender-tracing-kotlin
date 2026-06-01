@@ -1,5 +1,5 @@
 version = 1
-name = "proc-macro-kotlin"
+name = "opentelemetry-appender-tracing-kotlin"
 
 [setup]
 script = '''

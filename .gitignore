@@ -25,6 +25,7 @@ local.properties
 .classpath
 
 logs
+out/
 
 # Upstream Rust source — clone freshly when porting begins
 tmp/
