@@ -1,20 +1,30 @@
-# Kotlin/Gradle build artifacts
-build/
-.gradle/
-.kotlin/
-*.class
-*.jar
-*.war
-*.ear
-
-# Keep the Gradle wrapper jar checked in so CI can run `./gradlew`.
-!gradle/wrapper/gradle-wrapper.jar
-
-# IDE
-.idea/
+build
+bin
+.idea/*
 *.iml
-out/
-.codex/
+.gradle
+.cache
+*.swp
+.DS_Store
+.project
+
+.kotlin
+
+# Project-local Android SDK (auto-installed by build.gradle.kts).
+.android-sdk
+local.properties
+
+!.idea/vcs.xml
+!.idea/dictionaries
+!.idea/dictionaries/*
+!.idea/codeStyles
+!.idea/codeStyles/*
+
+.gradletasknamecache
+.settings
+.classpath
+
+logs
 
 # Upstream Rust source — clone freshly when porting begins
 tmp/
@@ -24,46 +34,19 @@ tmp/
 port_status_report.md
 high_priority_ports.md
 ast_distance_*.txt
-.cache/
-*.lock
-kotlin-js-store/*
-!kotlin-js-store/package.json
-!kotlin-js-store/yarn.lock
-!kotlin-js-store/wasm/
-!kotlin-js-store/wasm/yarn.lock
-tools/ast_distance/ast_distance
-tools/ast_distance/build/
+tools/ast_distance
 
-# JVM heap dumps
-*.hprof
-java_pid*.hprof
-
-# macOS Finder metadata
-.DS_Store
-
-# Python bytecode
-__pycache__/
-*.pyc
-
-# Android SDK
-/.android-sdk/
-local.properties
-
-# Swift Package Manager / Xcode workspace state.
-#
-# `swift-test-harness/` is a real SPM package that exercises the Kotlin
-# Swift Export pipeline against the artifacts produced by
-# `embedSwiftExportForXcode`. Its `Package.swift`, `Tests/`, and
-# per-package `.gitignore` (which ignores its own `.build/`) are all
-# tracked. The patterns below cover the Swift/Xcode workspace state
-# that this harness — or any future Swift Package added under the
-# repo — would also produce.
-#
-# Note: the staging directory the Kotlin Swift Export pipeline writes
-# to (`build/swift-test/lib*.a` + `.swiftmodule/` bundles when run with
-# the Xcode-style env vars) is already covered by `build/` above.
+# Swift Package Manager / Xcode workspace state
 .swiftpm/
 DerivedData/
 *.xcuserstate
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
+
+# JVM heap dumps
+*.hprof
+java_pid*.hprof
+
+# Python bytecode
+__pycache__/
+*.pyc
