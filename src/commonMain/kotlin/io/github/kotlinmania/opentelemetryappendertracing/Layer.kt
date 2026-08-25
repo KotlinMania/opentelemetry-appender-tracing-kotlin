@@ -92,6 +92,26 @@ public interface LoggerProvider {
     public fun logger(scopeName: String): Logger
 }
 
+public interface LogProcessor {
+    public fun emit(record: LogRecord)
+
+    public fun eventEnabled(
+        level: Severity,
+        target: String,
+        name: String?,
+    ): Boolean = true
+
+    public fun forceFlush(): Boolean = true
+}
+
+public fun attributesContains(logRecord: LogRecord, key: Key, value: AnyValue): Boolean {
+    return false
+}
+
+public fun createTracingSubscriber(loggerProvider: LoggerProvider): OpenTelemetryTracingBridge {
+    return OpenTelemetryTracingBridge.new(loggerProvider)
+}
+
 public data class TracingMetadata(
     public val level: TracingLevel,
     public val target: String,
@@ -108,13 +128,53 @@ public class TracingEvent(
     }
 }
 
+public fun isDuplicatedMetadata(field: String): Boolean {
+    if (field.startsWith("log.")) {
+        val remainder = field.substring(4)
+        return remainder == "file" || remainder == "line" || remainder == "module_path" || remainder == "target"
+    }
+    return false
+}
+
+public fun getFilename(filepath: String): String {
+    var lastIdx = -1
+    for (i in 0 until filepath.length) {
+        val c = filepath[i]
+        if (c == '/' || c == '\\') {
+            lastIdx = i
+        }
+    }
+    if (lastIdx >= 0) {
+        return filepath.substring(lastIdx + 1)
+    }
+    return filepath
+}
+
 public class EventVisitor internal constructor(
     private val logRecord: LogRecord,
 ) {
+    public fun visitExperimentalMetadata(
+        modulePath: String? = null,
+        file: String? = null,
+        line: Long? = null,
+    ) {
+        if (modulePath != null) {
+            logRecord.addAttribute(Key("code.namespace"), AnyValue.Text(modulePath))
+        }
+        if (file != null) {
+            logRecord.addAttribute(Key("code.filepath"), AnyValue.Text(file))
+            logRecord.addAttribute(Key("code.filename"), AnyValue.Text(getFilename(file)))
+        }
+        if (line != null) {
+            logRecord.addAttribute(Key("code.lineno"), AnyValue.Integer(line))
+        }
+    }
+
     public fun recordDebug(
         fieldName: String,
         value: Any?,
     ) {
+        if (isDuplicatedMetadata(fieldName)) return
         if (fieldName == "message") {
             logRecord.setBody(AnyValue.Text(value.toString()))
         } else {
@@ -138,6 +198,14 @@ public class EventVisitor internal constructor(
         fieldName: String,
         value: String,
     ) {
+        recordStr(fieldName, value)
+    }
+
+    public fun recordStr(
+        fieldName: String,
+        value: String,
+    ) {
+        if (isDuplicatedMetadata(fieldName)) return
         if (fieldName == "message") {
             logRecord.setBody(AnyValue.Text(value))
         } else {
@@ -149,10 +217,24 @@ public class EventVisitor internal constructor(
         fieldName: String,
         value: Boolean,
     ) {
+        recordBool(fieldName, value)
+    }
+
+    public fun recordBool(
+        fieldName: String,
+        value: Boolean,
+    ) {
         logRecord.addAttribute(Key(fieldName), AnyValue.BooleanValue(value))
     }
 
     public fun recordDouble(
+        fieldName: String,
+        value: Double,
+    ) {
+        recordF64(fieldName, value)
+    }
+
+    public fun recordF64(
         fieldName: String,
         value: Double,
     ) {
@@ -163,6 +245,14 @@ public class EventVisitor internal constructor(
         fieldName: String,
         value: Long,
     ) {
+        recordI64(fieldName, value)
+    }
+
+    public fun recordI64(
+        fieldName: String,
+        value: Long,
+    ) {
+        if (isDuplicatedMetadata(fieldName)) return
         logRecord.addAttribute(Key(fieldName), AnyValue.Integer(value))
     }
 
@@ -170,11 +260,33 @@ public class EventVisitor internal constructor(
         fieldName: String,
         value: ULong,
     ) {
+        recordU64(fieldName, value)
+    }
+
+    public fun recordU64(
+        fieldName: String,
+        value: ULong,
+    ) {
+        if (isDuplicatedMetadata(fieldName)) return
         if (value <= Long.MAX_VALUE.toULong()) {
             logRecord.addAttribute(Key(fieldName), AnyValue.Integer(value.toLong()))
         } else {
             logRecord.addAttribute(Key(fieldName), AnyValue.Text(value.toString()))
         }
+    }
+
+    public fun recordI128(
+        fieldName: String,
+        value: Long,
+    ) {
+        recordI64(fieldName, value)
+    }
+
+    public fun recordU128(
+        fieldName: String,
+        value: ULong,
+    ) {
+        recordU64(fieldName, value)
     }
 }
 
@@ -201,6 +313,8 @@ public class OpenTelemetryTracingBridge(
     }
 
     public companion object {
+        public fun new(provider: LoggerProvider): OpenTelemetryTracingBridge = OpenTelemetryTracingBridge(provider)
+
         public fun severityOfLevel(level: TracingLevel): Severity =
             when (level) {
                 TracingLevel.TRACE -> Severity.Trace
