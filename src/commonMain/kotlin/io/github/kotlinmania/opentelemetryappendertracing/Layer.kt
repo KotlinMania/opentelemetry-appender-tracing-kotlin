@@ -1,4 +1,4 @@
-// port-lint: source layer.rs
+// port-lint: source opentelemetry-appender-tracing/src/layer.rs
 @file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
 
 package io.github.kotlinmania.opentelemetryappendertracing
