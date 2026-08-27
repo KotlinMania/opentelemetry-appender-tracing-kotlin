@@ -94,17 +94,18 @@ class LayerTest {
         val expectedTraceId = "4bf92f3577b34da6a3ce929d0e0e4736"
         val expectedSpanId = "00f067aa0ba902b7"
 
-        val event = TracingEvent(
-            TracingMetadata(
-                level = TracingLevel.ERROR,
-                target = "my-system",
-                name = "my-event-name",
-            )
-        ) {
-            recordLong("event_id", 20)
-            recordString("user_name", "otel")
-            recordString("user_email", "otel@opentelemetry.io")
-        }
+        val event =
+            TracingEvent(
+                TracingMetadata(
+                    level = TracingLevel.ERROR,
+                    target = "my-system",
+                    name = "my-event-name",
+                ),
+            ) {
+                recordLong("event_id", 20)
+                recordString("user_name", "otel")
+                recordString("user_email", "otel@opentelemetry.io")
+            }
 
         val logRecord = provider.logger("").createLogRecord()
         logRecord.setTarget("my-system")
@@ -200,11 +201,12 @@ class LayerTest {
 
     @Test
     fun isEnabled() {
-        val processor = LogProcessorWithIsEnabled(
-            severityLevel = Severity.Error,
-            name = "my-event-name",
-            target = "my-system",
-        )
+        val processor =
+            LogProcessorWithIsEnabled(
+                severityLevel = Severity.Error,
+                name = "my-event-name",
+                target = "my-system",
+            )
         val enabled = processor.eventEnabled(Severity.Error, "my-system", "my-event-name")
         assertTrue(enabled)
         assertTrue(processor.forceFlush())
