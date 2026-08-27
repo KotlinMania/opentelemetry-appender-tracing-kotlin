@@ -4,14 +4,14 @@ Based on AST analysis, here are the concrete next steps.
 
 ## Summary
 
-- **Files Present:** 2/6 (33.3%)
-- **Function parity:** 22/44 matched (target 49) — 50.0%
-- **Class/type parity:** 3/7 matched (target 24) — 42.9%
-- **Combined symbol parity:** 25/51 matched (target 73) — 49.0%
-- **Average inline-code cosine:** 0.51 (function body across 1 matched files)
-- **Average documentation cosine:** 0.00 (doc text across 1 matched files)
-- **Cheat-zeroed Files:** 1
-- **Critical Issues:** 2 files with <0.60 function similarity
+- **Files Present:** 2/2 (100.0%)
+- **Function parity:** 22/27 matched (target 49) — 81.5%
+- **Class/type parity:** 3/3 matched (target 24) — 100.0%
+- **Combined symbol parity:** 25/30 matched (target 73) — 83.3%
+- **Average inline-code cosine:** 0.76 (function body across 2 matched files)
+- **Average documentation cosine:** 0.30 (doc text across 2 matched files)
+- **Cheat-zeroed Files:** 0
+- **Critical Issues:** 1 files with <0.60 function similarity
 
 ## Priority 1: Fix Incomplete High-Dependency Files
 
@@ -27,12 +27,12 @@ No missing high-value files detected.
 
 Every matched file is listed below with function and type symbol parity.
 
-### 1. opentelemetry-appender-tracing.layer
+### 1. layer
 
 - **Target:** `opentelemetryappendertracing.Layer`
 - **Similarity:** 0.51
-- **Dependents:** 3
-- **Priority Score:** 3053005.0
+- **Dependents:** 0
+- **Priority Score:** 53004.9
 - **Functions:** 22/27 matched (target 49)
 - **Missing functions:** `attributes_contains`, `create_tracing_subscriber`, `emit`, `event_enabled`, `force_flush`
 - **Types:** 3/3 matched (target 23)
@@ -40,12 +40,12 @@ Every matched file is listed below with function and type symbol parity.
 - **Tests:** 6/11 matched
 - **Lint issues:** 3
 
-### 2. opentelemetry-appender-tracing.lib
+### 2. lib
 
-- **Target:** `opentelemetryappendertracing.Lib [STUB]`
-- **Similarity:** 0.00
+- **Target:** `opentelemetryappendertracing.Lib`
+- **Similarity:** 1.00
 - **Dependents:** 0
-- **Priority Score:** 10.0
+- **Priority Score:** 0.0
 - **Functions:** 0/0 matched
 - **Missing functions:** _none_
 - **Types:** 0/0 matched (target 1)
