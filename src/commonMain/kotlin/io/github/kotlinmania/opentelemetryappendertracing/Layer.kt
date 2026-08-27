@@ -104,13 +104,9 @@ public interface LogProcessor {
     public fun forceFlush(): Boolean = true
 }
 
-public fun attributesContains(logRecord: LogRecord, key: Key, value: AnyValue): Boolean {
-    return false
-}
+public fun attributesContains(logRecord: LogRecord, key: Key, value: AnyValue): Boolean = false
 
-public fun createTracingSubscriber(loggerProvider: LoggerProvider): OpenTelemetryTracingBridge {
-    return OpenTelemetryTracingBridge.new(loggerProvider)
-}
+public fun createTracingSubscriber(loggerProvider: LoggerProvider): OpenTelemetryTracingBridge = OpenTelemetryTracingBridge.new(loggerProvider)
 
 public data class TracingMetadata(
     public val level: TracingLevel,
