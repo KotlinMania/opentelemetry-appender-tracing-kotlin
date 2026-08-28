@@ -2,7 +2,7 @@
 
 **Generated:** 2026-08-28
 **Source:** tmp/opentelemetry-appender-tracing/src
-**Target:** src/commonMain/kotlin
+**Target:** src/commonMain/kotlin/io/github/kotlinmania/opentelemetryappendertracing
 
 These are review proposals only. They are emitted when a Rust -> Kotlin pair matches only after fallback normalization, so the existing `port-lint` header is not an exact provenance match.
 
