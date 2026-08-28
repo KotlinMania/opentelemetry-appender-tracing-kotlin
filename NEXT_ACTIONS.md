@@ -38,7 +38,6 @@ Every matched file is listed below with function and type symbol parity.
 - **Types:** 3/3 matched (target 23)
 - **Missing types:** _none_
 - **Tests:** 6/11 matched
-- **Lint issues:** 3
 
 ### 2. lib
 
