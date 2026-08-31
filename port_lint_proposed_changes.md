@@ -1,6 +1,6 @@
 # port-lint Proposed Changes
 
-**Generated:** 2026-08-28
+**Generated:** 2026-08-31
 **Source:** tmp/opentelemetry-appender-tracing/src
 **Target:** src/commonMain/kotlin
 
