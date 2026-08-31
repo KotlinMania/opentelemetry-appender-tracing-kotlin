@@ -1,4 +1,4 @@
-// port-lint: source lib.rs
+// port-lint: source opentelemetry-appender-tracing/src/lib.rs
 package io.github.kotlinmania.opentelemetryappendertracing
 
 /**
