@@ -1,4 +1,4 @@
-// port-lint: tests layer.rs
+// port-lint: tests opentelemetry-appender-tracing/src/layer.rs
 package io.github.kotlinmania.opentelemetryappendertracing
 
 import kotlin.test.Test
