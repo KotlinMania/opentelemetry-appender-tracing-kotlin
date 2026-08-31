@@ -2,7 +2,7 @@
   "type": "port",
   "name": "opentelemetry-appender-tracing-kotlin",
   "source": {
-    "path": "tmp/opentelemetry-appender-tracing/src",
+    "path": "tmp",
     "lang": "rust"
   },
   "target": {
