@@ -90,6 +90,7 @@ class LayerTest {
     fun tracingAppenderInsideTracingContext() {
         val provider = InMemoryLoggerProvider()
         val bridge = createTracingSubscriber(provider)
+        assertNotNull(bridge)
 
         val expectedTraceId = "4bf92f3577b34da6a3ce929d0e0e4736"
         val expectedSpanId = "00f067aa0ba902b7"
@@ -132,6 +133,7 @@ class LayerTest {
     fun tracingAppenderInsideTracingCrateContext() {
         val provider = InMemoryLoggerProvider()
         val bridge = createTracingSubscriber(provider)
+        assertNotNull(bridge)
 
         val traceId = "12345678901234567890123456789012"
         val outerSpanId = "1111111111111111"
@@ -160,6 +162,7 @@ class LayerTest {
     fun tracingAppenderStandaloneWithTracingLog() {
         val provider = InMemoryLoggerProvider()
         val bridge = createTracingSubscriber(provider)
+        assertNotNull(bridge)
 
         val logRecord = provider.logger("").createLogRecord()
         logRecord.setTarget("log")
@@ -181,6 +184,7 @@ class LayerTest {
     fun tracingAppenderInsideTracingContextWithTracingLog() {
         val provider = InMemoryLoggerProvider()
         val bridge = createTracingSubscriber(provider)
+        assertNotNull(bridge)
 
         val expectedTraceId = "trace001"
         val expectedSpanId = "span001"
