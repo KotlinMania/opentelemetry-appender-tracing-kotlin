@@ -9,6 +9,9 @@ detekt = "2.0.0-alpha.6"
 ktlint = "14.2.0"
 ktlintEngine = "1.8.0"
 kotlinxBenchmark = "0.5.0"
+tracing = "0.1.0"
+tracingOpentelemetry = "0.1.0"
+log = "0.1.4"
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
@@ -26,6 +29,9 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
 collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "collectionsImmutable" }
 kotlinx-benchmark-runtime = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlinxBenchmark" }
+tracing-kotlin = { module = "io.github.kotlinmania:tracing-kotlin", version.ref = "tracing" }
+tracing-opentelemetry-kotlin = { module = "io.github.kotlinmania:tracing-opentelemetry-kotlin", version.ref = "tracingOpentelemetry" }
+log-kotlin = { module = "io.github.kotlinmania:log-kotlin", version.ref = "log" }
 
 [bundles]
 opentelemetryappendertracing-commonMain = [
@@ -34,4 +40,9 @@ opentelemetryappendertracing-commonMain = [
   "kotlinx-serialization-json",
   "kotlinx-datetime",
   "collections-immutable",
+  "tracing-kotlin",
+  "tracing-opentelemetry-kotlin",
+]
+opentelemetryappendertracing-commonTest = [
+  "log-kotlin",
 ]

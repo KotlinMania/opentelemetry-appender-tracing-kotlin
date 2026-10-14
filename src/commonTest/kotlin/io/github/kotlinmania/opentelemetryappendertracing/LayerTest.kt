@@ -1,6 +1,7 @@
 // port-lint: tests layer.rs
 package io.github.kotlinmania.opentelemetryappendertracing
 
+import io.github.kotlinmania.tracing.Level
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -39,7 +40,7 @@ class LayerTest {
             TracingEvent(
                 metadata =
                     TracingMetadata(
-                        level = TracingLevel.ERROR,
+                        level = Level.ERROR,
                         target = "my-system",
                         name = "my-event-name",
                     ),
@@ -78,7 +79,7 @@ class LayerTest {
         val bridge = createTracingSubscriber(provider)
 
         bridge.onEvent(
-            TracingEvent(TracingMetadata(TracingLevel.INFO, "target", "name")) {
+            TracingEvent(TracingMetadata(Level.INFO, "target", "name")) {
                 recordString("message", "ignored")
             },
         )
@@ -98,7 +99,7 @@ class LayerTest {
         val event =
             TracingEvent(
                 TracingMetadata(
-                    level = TracingLevel.ERROR,
+                    level = Level.ERROR,
                     target = "my-system",
                     name = "my-event-name",
                 ),

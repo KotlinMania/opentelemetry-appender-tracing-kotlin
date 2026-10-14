@@ -3,6 +3,7 @@
 
 package io.github.kotlinmania.opentelemetryappendertracing
 
+import io.github.kotlinmania.tracing.Level
 import kotlin.native.HiddenFromObjC
 
 public enum class Severity {
@@ -11,14 +12,6 @@ public enum class Severity {
     Info,
     Warn,
     Error,
-}
-
-public enum class TracingLevel {
-    TRACE,
-    DEBUG,
-    INFO,
-    WARN,
-    ERROR,
 }
 
 public sealed interface AnyValue {
@@ -109,7 +102,7 @@ public fun attributesContains(logRecord: LogRecord, key: Key, value: AnyValue): 
 public fun createTracingSubscriber(loggerProvider: LoggerProvider): OpenTelemetryTracingBridge = OpenTelemetryTracingBridge.new(loggerProvider)
 
 public data class TracingMetadata(
-    public val level: TracingLevel,
+    public val level: Level,
     public val target: String,
     public val name: String,
 )
@@ -311,13 +304,13 @@ public class OpenTelemetryTracingBridge(
     public companion object {
         public fun new(provider: LoggerProvider): OpenTelemetryTracingBridge = OpenTelemetryTracingBridge(provider)
 
-        public fun severityOfLevel(level: TracingLevel): Severity =
+        public fun severityOfLevel(level: Level): Severity =
             when (level) {
-                TracingLevel.TRACE -> Severity.Trace
-                TracingLevel.DEBUG -> Severity.Debug
-                TracingLevel.INFO -> Severity.Info
-                TracingLevel.WARN -> Severity.Warn
-                TracingLevel.ERROR -> Severity.Error
+                Level.TRACE -> Severity.Trace
+                Level.DEBUG -> Severity.Debug
+                Level.INFO -> Severity.Info
+                Level.WARN -> Severity.Warn
+                Level.ERROR -> Severity.Error
             }
     }
 }
