@@ -1,10 +1,7 @@
 // port-lint: source layer.rs
-@file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
-
 package io.github.kotlinmania.opentelemetryappendertracing
 
 import io.github.kotlinmania.tracing.Level
-import kotlin.native.HiddenFromObjC
 
 public enum class Severity {
     Trace,
@@ -85,6 +82,19 @@ public interface LoggerProvider {
     public fun logger(scopeName: String): Logger
 }
 
+public interface RecordAttributeLookup {
+    public fun containsAttribute(key: Key, value: AnyValue): Boolean
+}
+
+public fun attributesContains(logRecord: LogRecord, key: Key, value: AnyValue): Boolean {
+    val lookup = logRecord as? RecordAttributeLookup ?: return false
+    return lookup.containsAttribute(key, value)
+}
+
+public fun createTracingSubscriber(loggerProvider: LoggerProvider): OpenTelemetryTracingBridge {
+    return OpenTelemetryTracingBridge.new(loggerProvider)
+}
+
 public interface LogProcessor {
     public fun emit(record: LogRecord)
 
@@ -97,19 +107,24 @@ public interface LogProcessor {
     public fun forceFlush(): Boolean = true
 }
 
-public fun attributesContains(logRecord: LogRecord, key: Key, value: AnyValue): Boolean = false
-
-public fun createTracingSubscriber(loggerProvider: LoggerProvider): OpenTelemetryTracingBridge = OpenTelemetryTracingBridge.new(loggerProvider)
-
 public data class TracingMetadata(
     public val level: Level,
     public val target: String,
     public val name: String,
 )
 
-@HiddenFromObjC
+public data class TracingSpanContext(
+    public val traceId: String,
+    public val spanId: String,
+    public val traceFlags: String? = null,
+)
+
 public class TracingEvent(
     public val metadata: TracingMetadata,
+    public val file: String? = null,
+    public val line: Long? = null,
+    public val modulePath: String? = null,
+    public val spanContext: TracingSpanContext? = null,
     private val recordFields: EventVisitor.() -> Unit,
 ) {
     internal fun record(visitor: EventVisitor) {
@@ -117,6 +132,9 @@ public class TracingEvent(
     }
 }
 
+/**
+ * Logs from the log crate have duplicated attributes that we removed here.
+ */
 public fun isDuplicatedMetadata(field: String): Boolean {
     if (field.startsWith("log.")) {
         val remainder = field.substring(4)
@@ -126,19 +144,20 @@ public fun isDuplicatedMetadata(field: String): Boolean {
 }
 
 public fun getFilename(filepath: String): String {
-    var lastIdx = -1
-    for (i in 0 until filepath.length) {
-        val c = filepath[i]
-        if (c == '/' || c == '\\') {
-            lastIdx = i
-        }
+    val slashIdx = filepath.lastIndexOf('/')
+    if (slashIdx >= 0) {
+        return filepath.substring(slashIdx + 1)
     }
-    if (lastIdx >= 0) {
-        return filepath.substring(lastIdx + 1)
+    val backslashIdx = filepath.lastIndexOf('\\')
+    if (backslashIdx >= 0) {
+        return filepath.substring(backslashIdx + 1)
     }
     return filepath
 }
 
+/**
+ * Visitor to record the fields from the event record.
+ */
 public class EventVisitor internal constructor(
     private val logRecord: LogRecord,
 ) {
@@ -171,7 +190,6 @@ public class EventVisitor internal constructor(
         }
     }
 
-    @HiddenFromObjC
     public fun recordError(value: Throwable) {
         logRecord.addAttribute(Key("exception.message"), AnyValue.Text(value.message ?: value.toString()))
     }
@@ -181,13 +199,6 @@ public class EventVisitor internal constructor(
         value: ByteArray,
     ) {
         logRecord.addAttribute(Key(fieldName), AnyValue.Bytes(value.asList()))
-    }
-
-    public fun recordString(
-        fieldName: String,
-        value: String,
-    ) {
-        recordStr(fieldName, value)
     }
 
     public fun recordStr(
@@ -202,25 +213,11 @@ public class EventVisitor internal constructor(
         }
     }
 
-    public fun recordBoolean(
-        fieldName: String,
-        value: Boolean,
-    ) {
-        recordBool(fieldName, value)
-    }
-
     public fun recordBool(
         fieldName: String,
         value: Boolean,
     ) {
         logRecord.addAttribute(Key(fieldName), AnyValue.BooleanValue(value))
-    }
-
-    public fun recordDouble(
-        fieldName: String,
-        value: Double,
-    ) {
-        recordF64(fieldName, value)
     }
 
     public fun recordF64(
@@ -230,26 +227,12 @@ public class EventVisitor internal constructor(
         logRecord.addAttribute(Key(fieldName), AnyValue.FloatingPoint(value))
     }
 
-    public fun recordLong(
-        fieldName: String,
-        value: Long,
-    ) {
-        recordI64(fieldName, value)
-    }
-
     public fun recordI64(
         fieldName: String,
         value: Long,
     ) {
         if (isDuplicatedMetadata(fieldName)) return
         logRecord.addAttribute(Key(fieldName), AnyValue.Integer(value))
-    }
-
-    public fun recordUnsignedLong(
-        fieldName: String,
-        value: ULong,
-    ) {
-        recordU64(fieldName, value)
     }
 
     public fun recordU64(
@@ -271,11 +254,37 @@ public class EventVisitor internal constructor(
         recordI64(fieldName, value)
     }
 
+    public fun recordI128(
+        fieldName: String,
+        value: String,
+    ) {
+        if (isDuplicatedMetadata(fieldName)) return
+        val signed = value.toLongOrNull()
+        if (signed != null) {
+            logRecord.addAttribute(Key(fieldName), AnyValue.Integer(signed))
+        } else {
+            logRecord.addAttribute(Key(fieldName), AnyValue.Text(value))
+        }
+    }
+
     public fun recordU128(
         fieldName: String,
         value: ULong,
     ) {
         recordU64(fieldName, value)
+    }
+
+    public fun recordU128(
+        fieldName: String,
+        value: String,
+    ) {
+        if (isDuplicatedMetadata(fieldName)) return
+        val unsigned = value.toULongOrNull()
+        if (unsigned != null && unsigned <= Long.MAX_VALUE.toULong()) {
+            logRecord.addAttribute(Key(fieldName), AnyValue.Integer(unsigned.toLong()))
+        } else {
+            logRecord.addAttribute(Key(fieldName), AnyValue.Text(value))
+        }
     }
 }
 
@@ -284,7 +293,6 @@ public class OpenTelemetryTracingBridge(
 ) {
     private val logger: Logger = provider.logger("")
 
-    @HiddenFromObjC
     public fun onEvent(event: TracingEvent) {
         val metadata = event.metadata
         val severity = severityOfLevel(metadata.level)
@@ -297,7 +305,24 @@ public class OpenTelemetryTracingBridge(
         logRecord.setEventName(metadata.name)
         logRecord.setSeverityNumber(severity)
         logRecord.setSeverityText(metadata.level.name)
-        event.record(EventVisitor(logRecord))
+        val visitor = EventVisitor(logRecord)
+        val eventFile = event.file
+        val eventLine = event.line
+        val eventModulePath = event.modulePath
+        if (eventFile != null || eventLine != null || eventModulePath != null) {
+            visitor.visitExperimentalMetadata(eventModulePath, eventFile, eventLine)
+        }
+        event.record(visitor)
+
+        val spanContext = event.spanContext
+        if (spanContext != null) {
+            logRecord.setTraceContext(
+                spanContext.traceId,
+                spanContext.spanId,
+                spanContext.traceFlags,
+            )
+        }
+
         logger.emit(logRecord)
     }
 
