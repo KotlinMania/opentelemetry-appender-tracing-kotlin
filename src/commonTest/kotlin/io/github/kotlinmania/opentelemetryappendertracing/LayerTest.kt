@@ -261,7 +261,9 @@ public class InMemoryLogger(
     }
 }
 
-public class InMemoryLogRecord : LogRecord, RecordAttributeLookup {
+public class InMemoryLogRecord :
+    LogRecord,
+    RecordAttributeLookup {
     override fun containsAttribute(key: Key, value: AnyValue): Boolean =
         attributes[key] == value
 
