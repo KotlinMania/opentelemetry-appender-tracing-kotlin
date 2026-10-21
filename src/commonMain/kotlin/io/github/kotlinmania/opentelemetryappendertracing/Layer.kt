@@ -21,9 +21,8 @@ public fun attributesContains(logRecord: LogRecord, key: Key, value: AnyValue): 
     return lookup.containsAttribute(key, value)
 }
 
-public fun createTracingSubscriber(loggerProvider: LoggerProvider): OpenTelemetryTracingBridge {
-    return OpenTelemetryTracingBridge.new(loggerProvider)
-}
+public fun createTracingSubscriber(loggerProvider: LoggerProvider): OpenTelemetryTracingBridge =
+    OpenTelemetryTracingBridge.new(loggerProvider)
 
 public interface LogProcessor {
     public fun emit(record: LogRecord)

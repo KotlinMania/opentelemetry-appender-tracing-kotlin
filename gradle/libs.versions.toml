@@ -13,6 +13,7 @@ tracing = "0.1.0"
 tracingOpentelemetry = "0.1.0"
 opentelemetry = "0.2.0"
 log = "0.1.5"
+procMacro = "0.1.4"
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
@@ -34,6 +35,7 @@ tracing-kotlin = { module = "io.github.kotlinmania:tracing-kotlin", version.ref 
 tracing-opentelemetry-kotlin = { module = "io.github.kotlinmania:tracing-opentelemetry-kotlin", version.ref = "tracingOpentelemetry" }
 opentelemetry-kotlin = { module = "io.github.kotlinmania:opentelemetry-kotlin", version.ref = "opentelemetry" }
 log-kotlin = { module = "io.github.kotlinmania:log-kotlin", version.ref = "log" }
+proc-macro-kotlin = { module = "io.github.kotlinmania:proc-macro-kotlin", version.ref = "procMacro" }
 
 [bundles]
 opentelemetryappendertracing-commonMain = [
@@ -45,6 +47,7 @@ opentelemetryappendertracing-commonMain = [
   "tracing-kotlin",
   "tracing-opentelemetry-kotlin",
   "opentelemetry-kotlin",
+  "proc-macro-kotlin",
 ]
 opentelemetryappendertracing-commonTest = [
   "log-kotlin",

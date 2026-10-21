@@ -967,15 +967,27 @@ tasks.register("hostTests") {
 val strictSwiftConfiguration = layout.projectDirectory.file("verification/strict-swift.xcconfig")
 tasks.matching { it.name.endsWith("generateSPMPackage", ignoreCase = true) }.configureEach {
     doLast {
-        val manifests = layout.buildDirectory.dir("SPMPackage").get().asFile
-            .walkTopDown().filter { it.isFile && it.name == "Package.swift" }.toList()
+        val manifests =
+            layout.buildDirectory
+                .dir("SPMPackage")
+                .get()
+                .asFile
+                .walkTopDown()
+                .filter { it.isFile && it.name == "Package.swift" }
+                .toList()
         check(manifests.isNotEmpty()) { "No generated Swift package manifests" }
         val execOperations = serviceOf<ExecOperations>()
         manifests.forEach { manifest ->
-            execOperations.exec {
-                commandLine("python3", layout.projectDirectory.file("verification/enforce_swift6.py").asFile,
-                    manifest, "--receipt", manifest.parentFile.resolve("swift6-manifest-receipt.json"))
-            }.assertNormalExitValue()
+            execOperations
+                .exec {
+                    commandLine(
+                        "python3",
+                        layout.projectDirectory.file("verification/enforce_swift6.py").asFile,
+                        manifest,
+                        "--receipt",
+                        manifest.parentFile.resolve("swift6-manifest-receipt.json"),
+                    )
+                }.assertNormalExitValue()
         }
     }
 }
@@ -1049,8 +1061,15 @@ tasks.register("swiftExportSmokeTest") {
                 .exec {
                     workingDir = layout.projectDirectory.dir("swift-test-harness").asFile
                     commandLine(
-                        "swift", "test", "-v",
-                        "-Xswiftc", "-swift-version", "-Xswiftc", "6", "-Xswiftc", "-warnings-as-errors",
+                        "swift",
+                        "test",
+                        "-v",
+                        "-Xswiftc",
+                        "-swift-version",
+                        "-Xswiftc",
+                        "6",
+                        "-Xswiftc",
+                        "-warnings-as-errors",
                     )
                     standardOutput = swiftTestOutput
                     errorOutput = swiftTestOutput
@@ -1129,77 +1148,101 @@ tasks.named("build") {
 // kotlinmania:android-publication:v1 begin
 // The Android KMP plugin owns the single Android Maven publication.
 // Verify its real staged payload; never attach a second AAR publication.
-val androidPublicationRoot = providers.provider {
-    publishing.publications.getByName("kotlinMultiplatform") as MavenPublication
-}
-val androidPublicationBundle = tasks.register<Zip>("androidPublicationBundle") {
-    group = "verification"
-    // A root publication can require shared Native/cinterop metadata. Never initiate
-    // its Apple compilation from the Linux Android job.
-    val externalRoot = providers.gradleProperty("project.publication.android.rootStagingDirectory").orNull
-    val root = androidPublicationRoot.get()
-    val coordinatePath = "${root.groupId.replace('.', '/')}/${root.artifactId}"
-    dependsOn(tasks.named<PublishToMavenRepository>("publishAndroidPublicationToCentralPortalStagingRepository"))
-    from(layout.buildDirectory.dir("staging-deploy")) {
-        include("$coordinatePath-android/${root.version}/**")
+val androidPublicationRoot =
+    providers.provider {
+        publishing.publications.getByName("kotlinMultiplatform") as MavenPublication
     }
-    if (externalRoot == null) {
-        val hasAppleTargets = kotlin.targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
-            .any { it.konanTarget.family.isAppleFamily }
-        check(!hasAppleTargets || providers.systemProperty("os.name").get().startsWith("Mac")) {
-            "Stage the real KMP root on macOS, then set project.publication.android.rootStagingDirectory and expectedRootHead"
-        }
-        dependsOn(tasks.named<PublishToMavenRepository>("publishKotlinMultiplatformPublicationToCentralPortalStagingRepository"))
-        from(layout.buildDirectory.dir("staging-deploy")) {
-            include("$coordinatePath/${root.version}/**")
-        }
-    } else {
-        val rootDirectory = file(externalRoot)
-        val sourceReceipt = file("$externalRoot.source-head")
-        val expectedHead = providers.gradleProperty("project.publication.android.expectedRootHead")
-        inputs.file(sourceReceipt)
-        inputs.property("expectedRootHead", expectedHead)
-        from(rootDirectory) { include("$coordinatePath/${root.version}/**") }
-        doFirst {
-            val head = expectedHead.orNull
-            check(head != null && head.matches(Regex("[0-9a-f]{40}"))) { "Set expectedRootHead to the exact source commit" }
-            check(rootDirectory.isDirectory && sourceReceipt.isFile && sourceReceipt.readText().trim() == head) {
-                "Missing or stale same-head KMP root staging receipt: $sourceReceipt"
-            }
-            check(file("$externalRoot/$coordinatePath/${root.version}/${root.artifactId}-${root.version}.module").isFile) {
-                "Missing real KMP root module metadata in $rootDirectory"
-            }
-        }
-    }
-    duplicatesStrategy = DuplicatesStrategy.FAIL
-    archiveFileName.set("android-publication.zip")
-    destinationDirectory.set(layout.buildDirectory.dir("verification"))
-}
-val verifyAndroidPublication = tasks.register<Exec>("verifyAndroidPublication") {
-    group = "verification"
-    description = "Checks Android AAR bytecode, root redirects, POM and API/runtime metadata."
-    dependsOn(androidPublicationBundle)
-    val script = rootProject.layout.projectDirectory.file("verification/verify_android_publication.py")
-    val bundle = androidPublicationBundle.flatMap { it.archiveFile }
-    val receipt = layout.buildDirectory.file("reports/publication/android.json")
-    inputs.files(script, bundle)
-    val classes = providers.gradleProperty("project.publication.android.publicClasses").orElse("")
-    val edges = providers.gradleProperty("project.publication.android.apiDependencies").orElse("")
-    inputs.property("publicClasses", classes)
-    inputs.property("apiDependencies", edges)
-    outputs.file(receipt)
-    doFirst {
-        val publicClasses = classes.get().split(',').map { it.trim() }.filter { it.isNotEmpty() }
-        check(publicClasses.isNotEmpty()) { "Set project.publication.android.publicClasses to actual public .class paths" }
+val androidPublicationBundle =
+    tasks.register<Zip>("androidPublicationBundle") {
+        group = "verification"
+        // A root publication can require shared Native/cinterop metadata. Never initiate
+        // its Apple compilation from the Linux Android job.
+        val externalRoot = providers.gradleProperty("project.publication.android.rootStagingDirectory").orNull
         val root = androidPublicationRoot.get()
-        commandLine(listOf(
-            "python3", script.asFile.absolutePath, bundle.get().asFile.absolutePath,
-            "--group", root.groupId, "--module", root.artifactId, "--version", root.version,
-            "--receipt", receipt.get().asFile.absolutePath,
-        ) + publicClasses.flatMap { listOf("--public-class", it) } +
-            edges.get().split(',').map { it.trim() }.filter { it.isNotEmpty() }
-                .flatMap { listOf("--api-dependency", it) })
+        val coordinatePath = "${root.groupId.replace('.', '/')}/${root.artifactId}"
+        dependsOn(tasks.named<PublishToMavenRepository>("publishAndroidPublicationToCentralPortalStagingRepository"))
+        from(layout.buildDirectory.dir("staging-deploy")) {
+            include("$coordinatePath-android/${root.version}/**")
+        }
+        if (externalRoot == null) {
+            val hasAppleTargets =
+                kotlin.targets
+                    .withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
+                    .any { it.konanTarget.family.isAppleFamily }
+            check(!hasAppleTargets || providers.systemProperty("os.name").get().startsWith("Mac")) {
+                "Stage the real KMP root on macOS, then set project.publication.android.rootStagingDirectory and expectedRootHead"
+            }
+            dependsOn(tasks.named<PublishToMavenRepository>("publishKotlinMultiplatformPublicationToCentralPortalStagingRepository"))
+            from(layout.buildDirectory.dir("staging-deploy")) {
+                include("$coordinatePath/${root.version}/**")
+            }
+        } else {
+            val rootDirectory = file(externalRoot)
+            val sourceReceipt = file("$externalRoot.source-head")
+            val expectedHead = providers.gradleProperty("project.publication.android.expectedRootHead")
+            inputs.file(sourceReceipt)
+            inputs.property("expectedRootHead", expectedHead)
+            from(rootDirectory) { include("$coordinatePath/${root.version}/**") }
+            doFirst {
+                val head = expectedHead.orNull
+                check(head != null && head.matches(Regex("[0-9a-f]{40}"))) { "Set expectedRootHead to the exact source commit" }
+                check(rootDirectory.isDirectory && sourceReceipt.isFile && sourceReceipt.readText().trim() == head) {
+                    "Missing or stale same-head KMP root staging receipt: $sourceReceipt"
+                }
+                check(file("$externalRoot/$coordinatePath/${root.version}/${root.artifactId}-${root.version}.module").isFile) {
+                    "Missing real KMP root module metadata in $rootDirectory"
+                }
+            }
+        }
+        duplicatesStrategy = DuplicatesStrategy.FAIL
+        archiveFileName.set("android-publication.zip")
+        destinationDirectory.set(layout.buildDirectory.dir("verification"))
     }
-}
+val verifyAndroidPublication =
+    tasks.register<Exec>("verifyAndroidPublication") {
+        group = "verification"
+        description = "Checks Android AAR bytecode, root redirects, POM and API/runtime metadata."
+        dependsOn(androidPublicationBundle)
+        val script = rootProject.layout.projectDirectory.file("verification/verify_android_publication.py")
+        val bundle = androidPublicationBundle.flatMap { it.archiveFile }
+        val receipt = layout.buildDirectory.file("reports/publication/android.json")
+        inputs.files(script, bundle)
+        val classes = providers.gradleProperty("project.publication.android.publicClasses").orElse("")
+        val edges = providers.gradleProperty("project.publication.android.apiDependencies").orElse("")
+        inputs.property("publicClasses", classes)
+        inputs.property("apiDependencies", edges)
+        outputs.file(receipt)
+        doFirst {
+            val publicClasses =
+                classes
+                    .get()
+                    .split(',')
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+            check(publicClasses.isNotEmpty()) { "Set project.publication.android.publicClasses to actual public .class paths" }
+            val root = androidPublicationRoot.get()
+            commandLine(
+                listOf(
+                    "python3",
+                    script.asFile.absolutePath,
+                    bundle.get().asFile.absolutePath,
+                    "--group",
+                    root.groupId,
+                    "--module",
+                    root.artifactId,
+                    "--version",
+                    root.version,
+                    "--receipt",
+                    receipt.get().asFile.absolutePath,
+                ) + publicClasses.flatMap { listOf("--public-class", it) } +
+                    edges
+                        .get()
+                        .split(',')
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .flatMap { listOf("--api-dependency", it) },
+            )
+        }
+    }
 tasks.named("publishToCentralPortal") { dependsOn(verifyAndroidPublication) }
 // kotlinmania:android-publication:v1 end
