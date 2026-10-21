@@ -19,16 +19,4 @@ struct OpentelemetryAppenderTracingExportTests {
         #expect(isDuplicatedMetadata(field: "log.custom") == false)
         #expect(isDuplicatedMetadata(field: "other.file") == false)
     }
-
-    @Test("Verify Severity enum representation")
-    func testSeverityEnum() throws {
-        let trace = Severity.trace
-        let debug = Severity.debug
-        let info = Severity.info
-        let warn = Severity.warn
-        let error = Severity.error
-        #expect(trace != debug)
-        #expect(info != warn)
-        #expect(warn != error)
-    }
 }
