@@ -13,7 +13,9 @@ public class LogProcessorWithIsEnabled(
     public val name: String,
     public val target: String,
 ) : LogProcessor {
-    override fun emit(record: LogRecord) {}
+    override fun emit(record: LogRecord) {
+        // no-op
+    }
 
     override fun eventEnabled(level: Severity, target: String, name: String?): Boolean {
         assertEquals(this.severityLevel, level)
@@ -23,11 +25,20 @@ public class LogProcessorWithIsEnabled(
     }
 
     override fun forceFlush(): Boolean = true
+
+    public companion object {
+        public fun new(severityLevel: Severity, name: String, target: String): LogProcessorWithIsEnabled =
+            LogProcessorWithIsEnabled(severityLevel, name, target)
+    }
 }
 
-private fun testAttributesContains(logRecord: LogRecord, key: Key, value: AnyValue): Boolean {
+public fun attributesContains(logRecord: LogRecord, key: Key, value: AnyValue): Boolean {
     val record = logRecord as? InMemoryLogRecord ?: return false
     return record.attributes[key] == value
+}
+
+public fun createTracingSubscriber(loggerProvider: LoggerProvider): OpenTelemetryTracingBridge {
+    return OpenTelemetryTracingBridge.new(loggerProvider)
 }
 
 class LayerTest {
@@ -45,14 +56,14 @@ class LayerTest {
                         name = "my-event-name",
                     ),
             ) {
-                recordLong("event_id", 20)
+                recordI64("event_id", 20)
                 recordBytes("bytes", byteArrayOf(97, 98, 99))
                 recordError(IllegalStateException("already shutdown"))
-                recordUnsignedLong("small_u64value", 42uL)
-                recordUnsignedLong("big_u64value", ULong.MAX_VALUE)
-                recordString("user_name", "otel")
-                recordString("user_email", "otel@opentelemetry.io")
-                recordString("message", "This is an example message")
+                recordU64("small_u64value", 42uL)
+                recordU64("big_u64value", ULong.MAX_VALUE)
+                recordStr("user_name", "otel")
+                recordStr("user_email", "otel@opentelemetry.io")
+                recordStr("message", "This is an example message")
             },
         )
 
@@ -64,13 +75,13 @@ class LayerTest {
         assertEquals("my-event-name", log.eventName)
         assertNull(log.traceContext)
         assertEquals(AnyValue.Text("This is an example message"), log.body)
-        assertTrue(testAttributesContains(log, Key("event_id"), AnyValue.Integer(20)))
-        assertTrue(testAttributesContains(log, Key("bytes"), AnyValue.Bytes(listOf(97, 98, 99))))
-        assertTrue(testAttributesContains(log, Key("exception.message"), AnyValue.Text("already shutdown")))
-        assertTrue(testAttributesContains(log, Key("small_u64value"), AnyValue.Integer(42)))
-        assertTrue(testAttributesContains(log, Key("big_u64value"), AnyValue.Text(ULong.MAX_VALUE.toString())))
-        assertTrue(testAttributesContains(log, Key("user_name"), AnyValue.Text("otel")))
-        assertTrue(testAttributesContains(log, Key("user_email"), AnyValue.Text("otel@opentelemetry.io")))
+        assertTrue(attributesContains(log, Key("event_id"), AnyValue.Integer(20)))
+        assertTrue(attributesContains(log, Key("bytes"), AnyValue.Bytes(listOf(97, 98, 99))))
+        assertTrue(attributesContains(log, Key("exception.message"), AnyValue.Text("already shutdown")))
+        assertTrue(attributesContains(log, Key("small_u64value"), AnyValue.Integer(42)))
+        assertTrue(attributesContains(log, Key("big_u64value"), AnyValue.Text(ULong.MAX_VALUE.toString())))
+        assertTrue(attributesContains(log, Key("user_name"), AnyValue.Text("otel")))
+        assertTrue(attributesContains(log, Key("user_email"), AnyValue.Text("otel@opentelemetry.io")))
     }
 
     @Test
@@ -80,7 +91,7 @@ class LayerTest {
 
         bridge.onEvent(
             TracingEvent(TracingMetadata(Level.INFO, "target", "name")) {
-                recordString("message", "ignored")
+                recordStr("message", "ignored")
             },
         )
 
@@ -104,9 +115,9 @@ class LayerTest {
                     name = "my-event-name",
                 ),
             ) {
-                recordLong("event_id", 20)
-                recordString("user_name", "otel")
-                recordString("user_email", "otel@opentelemetry.io")
+                recordI64("event_id", 20)
+                recordStr("user_name", "otel")
+                recordStr("user_email", "otel@opentelemetry.io")
             }
 
         val logRecord = provider.logger("").createLogRecord()
@@ -125,9 +136,9 @@ class LayerTest {
         assertNotNull(log.traceContext)
         assertEquals(expectedTraceId, log.traceContext?.traceId)
         assertEquals(expectedSpanId, log.traceContext?.spanId)
-        assertTrue(testAttributesContains(log, Key("event_id"), AnyValue.Integer(20)))
-        assertTrue(testAttributesContains(log, Key("user_name"), AnyValue.Text("otel")))
-        assertTrue(testAttributesContains(log, Key("user_email"), AnyValue.Text("otel@opentelemetry.io")))
+        assertTrue(attributesContains(log, Key("event_id"), AnyValue.Integer(20)))
+        assertTrue(attributesContains(log, Key("user_name"), AnyValue.Text("otel")))
+        assertTrue(attributesContains(log, Key("user_email"), AnyValue.Text("otel@opentelemetry.io")))
     }
 
     @Test
@@ -207,7 +218,7 @@ class LayerTest {
     @Test
     fun isEnabled() {
         val processor =
-            LogProcessorWithIsEnabled(
+            LogProcessorWithIsEnabled.new(
                 severityLevel = Severity.Error,
                 name = "my-event-name",
                 target = "my-system",
@@ -218,11 +229,11 @@ class LayerTest {
     }
 }
 
-private class InMemoryLoggerProvider(
+public class InMemoryLoggerProvider(
     enabled: Boolean = true,
 ) : LoggerProvider {
-    val exported = mutableListOf<InMemoryLogRecord>()
-    val scopeNames = mutableListOf<String>()
+    val exported: MutableList<InMemoryLogRecord> = mutableListOf()
+    val scopeNames: MutableList<String> = mutableListOf()
     private val logger = InMemoryLogger(exported, enabled)
 
     override fun logger(scopeName: String): Logger {
@@ -231,7 +242,7 @@ private class InMemoryLoggerProvider(
     }
 }
 
-private class InMemoryLogger(
+public class InMemoryLogger(
     private val exported: MutableList<InMemoryLogRecord>,
     private val enabled: Boolean,
 ) : Logger {
@@ -248,10 +259,12 @@ private class InMemoryLogger(
     }
 }
 
-private class InMemoryLogRecord : LogRecord {
+public class InMemoryLogRecord : LogRecord, RecordAttributeLookup {
+    override fun containsAttribute(key: Key, value: AnyValue): Boolean =
+        attributes[key] == value
     var body: AnyValue? = null
         private set
-    val attributes = linkedMapOf<Key, AnyValue>()
+    val attributes: LinkedHashMap<Key, AnyValue> = linkedMapOf()
     var target: String? = null
         private set
     var eventName: String? = null
