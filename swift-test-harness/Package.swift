@@ -4,16 +4,16 @@ import PackageDescription
 let package = Package(
     name: "SwiftTestHarness",
     platforms: [
-        .macOS(.v15),
+        .macOS("15.0"),
     ],
     dependencies: [
-        .package(name: "OpentelemetryAppenderTracing", path: "../build/SPMPackage/macosArm64/Debug")
+        .package(name: "OpentelemetryAppenderTracing", path: "../build/SPMPackage/macosArm64/Debug"),
     ],
     targets: [
         .testTarget(
             name: "SwiftTestHarnessTests",
             dependencies: [
-                .product(name: "OpentelemetryAppenderTracingLibrary", package: "OpentelemetryAppenderTracing")
+                .product(name: "OpentelemetryAppenderTracingLibrary", package: "OpentelemetryAppenderTracing"),
             ],
             linkerSettings: [
                 .unsafeFlags([
@@ -23,5 +23,6 @@ let package = Package(
                 ]),
             ]
         ),
-    ]
+    ],
+    swiftLanguageModes: [.v6]
 )
