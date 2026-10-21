@@ -1,86 +1,16 @@
 // port-lint: source layer.rs
 package io.github.kotlinmania.opentelemetryappendertracing
 
+import io.github.kotlinmania.opentelemetry.Key
+import io.github.kotlinmania.opentelemetry.SpanId
+import io.github.kotlinmania.opentelemetry.TraceFlags
+import io.github.kotlinmania.opentelemetry.TraceId
+import io.github.kotlinmania.opentelemetry.logs.AnyValue
+import io.github.kotlinmania.opentelemetry.logs.LogRecord
+import io.github.kotlinmania.opentelemetry.logs.Logger
+import io.github.kotlinmania.opentelemetry.logs.LoggerProvider
+import io.github.kotlinmania.opentelemetry.logs.Severity
 import io.github.kotlinmania.tracing.Level
-
-public enum class Severity {
-    Trace,
-    Debug,
-    Info,
-    Warn,
-    Error,
-}
-
-public sealed interface AnyValue {
-    public data class Text(
-        public val value: String,
-    ) : AnyValue
-
-    public data class Integer(
-        public val value: Long,
-    ) : AnyValue
-
-    public data class FloatingPoint(
-        public val value: Double,
-    ) : AnyValue
-
-    public data class BooleanValue(
-        public val value: Boolean,
-    ) : AnyValue
-
-    public data class Bytes(
-        public val value: List<Byte>,
-    ) : AnyValue
-}
-
-public data class Key(
-    public val name: String,
-)
-
-public data class TraceContext(
-    public val traceId: String,
-    public val spanId: String,
-    public val traceFlags: String? = null,
-)
-
-public interface LogRecord {
-    public fun setBody(value: AnyValue)
-
-    public fun addAttribute(
-        key: Key,
-        value: AnyValue,
-    )
-
-    public fun setTarget(target: String)
-
-    public fun setEventName(name: String)
-
-    public fun setSeverityNumber(severity: Severity)
-
-    public fun setSeverityText(text: String)
-
-    public fun setTraceContext(
-        traceId: String,
-        spanId: String,
-        traceFlags: String? = null,
-    )
-}
-
-public interface Logger {
-    public fun createLogRecord(): LogRecord
-
-    public fun eventEnabled(
-        severity: Severity,
-        target: String,
-        name: String?,
-    ): Boolean = true
-
-    public fun emit(record: LogRecord)
-}
-
-public interface LoggerProvider {
-    public fun logger(scopeName: String): Logger
-}
 
 public interface RecordAttributeLookup {
     public fun containsAttribute(key: Key, value: AnyValue): Boolean
@@ -114,9 +44,9 @@ public data class TracingMetadata(
 )
 
 public data class TracingSpanContext(
-    public val traceId: String,
-    public val spanId: String,
-    public val traceFlags: String? = null,
+    public val traceId: TraceId,
+    public val spanId: SpanId,
+    public val traceFlags: TraceFlags? = null,
 )
 
 public class TracingEvent(
@@ -167,14 +97,14 @@ public class EventVisitor internal constructor(
         line: Long? = null,
     ) {
         if (modulePath != null) {
-            logRecord.addAttribute(Key("code.namespace"), AnyValue.Text(modulePath))
+            logRecord.addAttribute(Key.new("code.namespace"), AnyValue.of(modulePath))
         }
         if (file != null) {
-            logRecord.addAttribute(Key("code.filepath"), AnyValue.Text(file))
-            logRecord.addAttribute(Key("code.filename"), AnyValue.Text(getFilename(file)))
+            logRecord.addAttribute(Key.new("code.filepath"), AnyValue.of(file))
+            logRecord.addAttribute(Key.new("code.filename"), AnyValue.of(getFilename(file)))
         }
         if (line != null) {
-            logRecord.addAttribute(Key("code.lineno"), AnyValue.Integer(line))
+            logRecord.addAttribute(Key.new("code.lineno"), AnyValue.of(line))
         }
     }
 
@@ -184,21 +114,21 @@ public class EventVisitor internal constructor(
     ) {
         if (isDuplicatedMetadata(fieldName)) return
         if (fieldName == "message") {
-            logRecord.setBody(AnyValue.Text(value.toString()))
+            logRecord.setBody(AnyValue.of(value.toString()))
         } else {
-            logRecord.addAttribute(Key(fieldName), AnyValue.Text(value.toString()))
+            logRecord.addAttribute(Key.new(fieldName), AnyValue.of(value.toString()))
         }
     }
 
     public fun recordError(value: Throwable) {
-        logRecord.addAttribute(Key("exception.message"), AnyValue.Text(value.message ?: value.toString()))
+        logRecord.addAttribute(Key.new("exception.message"), AnyValue.of(value.message ?: value.toString()))
     }
 
     public fun recordBytes(
         fieldName: String,
         value: ByteArray,
     ) {
-        logRecord.addAttribute(Key(fieldName), AnyValue.Bytes(value.asList()))
+        logRecord.addAttribute(Key.new(fieldName), AnyValue.of(value))
     }
 
     public fun recordStr(
@@ -207,9 +137,9 @@ public class EventVisitor internal constructor(
     ) {
         if (isDuplicatedMetadata(fieldName)) return
         if (fieldName == "message") {
-            logRecord.setBody(AnyValue.Text(value))
+            logRecord.setBody(AnyValue.of(value))
         } else {
-            logRecord.addAttribute(Key(fieldName), AnyValue.Text(value))
+            logRecord.addAttribute(Key.new(fieldName), AnyValue.of(value))
         }
     }
 
@@ -217,14 +147,14 @@ public class EventVisitor internal constructor(
         fieldName: String,
         value: Boolean,
     ) {
-        logRecord.addAttribute(Key(fieldName), AnyValue.BooleanValue(value))
+        logRecord.addAttribute(Key.new(fieldName), AnyValue.of(value))
     }
 
     public fun recordF64(
         fieldName: String,
         value: Double,
     ) {
-        logRecord.addAttribute(Key(fieldName), AnyValue.FloatingPoint(value))
+        logRecord.addAttribute(Key.new(fieldName), AnyValue.of(value))
     }
 
     public fun recordI64(
@@ -232,7 +162,7 @@ public class EventVisitor internal constructor(
         value: Long,
     ) {
         if (isDuplicatedMetadata(fieldName)) return
-        logRecord.addAttribute(Key(fieldName), AnyValue.Integer(value))
+        logRecord.addAttribute(Key.new(fieldName), AnyValue.of(value))
     }
 
     public fun recordU64(
@@ -241,9 +171,9 @@ public class EventVisitor internal constructor(
     ) {
         if (isDuplicatedMetadata(fieldName)) return
         if (value <= Long.MAX_VALUE.toULong()) {
-            logRecord.addAttribute(Key(fieldName), AnyValue.Integer(value.toLong()))
+            logRecord.addAttribute(Key.new(fieldName), AnyValue.of(value.toLong()))
         } else {
-            logRecord.addAttribute(Key(fieldName), AnyValue.Text(value.toString()))
+            logRecord.addAttribute(Key.new(fieldName), AnyValue.of(value.toString()))
         }
     }
 
@@ -261,9 +191,9 @@ public class EventVisitor internal constructor(
         if (isDuplicatedMetadata(fieldName)) return
         val signed = value.toLongOrNull()
         if (signed != null) {
-            logRecord.addAttribute(Key(fieldName), AnyValue.Integer(signed))
+            logRecord.addAttribute(Key.new(fieldName), AnyValue.of(signed))
         } else {
-            logRecord.addAttribute(Key(fieldName), AnyValue.Text(value))
+            logRecord.addAttribute(Key.new(fieldName), AnyValue.of(value))
         }
     }
 
@@ -281,9 +211,9 @@ public class EventVisitor internal constructor(
         if (isDuplicatedMetadata(fieldName)) return
         val unsigned = value.toULongOrNull()
         if (unsigned != null && unsigned <= Long.MAX_VALUE.toULong()) {
-            logRecord.addAttribute(Key(fieldName), AnyValue.Integer(unsigned.toLong()))
+            logRecord.addAttribute(Key.new(fieldName), AnyValue.of(unsigned.toLong()))
         } else {
-            logRecord.addAttribute(Key(fieldName), AnyValue.Text(value))
+            logRecord.addAttribute(Key.new(fieldName), AnyValue.of(value))
         }
     }
 }

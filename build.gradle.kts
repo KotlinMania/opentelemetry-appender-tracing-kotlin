@@ -484,6 +484,7 @@ kotlin {
             implementation(commonMainDependencyBundle)
             api(libs.tracing.kotlin)
             api(libs.tracing.opentelemetry.kotlin)
+            api(libs.opentelemetry.kotlin)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

@@ -1,12 +1,23 @@
 // port-lint: tests layer.rs
 package io.github.kotlinmania.opentelemetryappendertracing
 
+import io.github.kotlinmania.opentelemetry.InstrumentationScope
+import io.github.kotlinmania.opentelemetry.Key
+import io.github.kotlinmania.opentelemetry.SpanId
+import io.github.kotlinmania.opentelemetry.TraceFlags
+import io.github.kotlinmania.opentelemetry.TraceId
+import io.github.kotlinmania.opentelemetry.logs.AnyValue
+import io.github.kotlinmania.opentelemetry.logs.LogRecord
+import io.github.kotlinmania.opentelemetry.logs.Logger
+import io.github.kotlinmania.opentelemetry.logs.LoggerProvider
+import io.github.kotlinmania.opentelemetry.logs.Severity
 import io.github.kotlinmania.tracing.Level
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 public class LogProcessorWithIsEnabled(
     public val severityLevel: Severity,
@@ -30,15 +41,6 @@ public class LogProcessorWithIsEnabled(
         public fun new(severityLevel: Severity, name: String, target: String): LogProcessorWithIsEnabled =
             LogProcessorWithIsEnabled(severityLevel, name, target)
     }
-}
-
-public fun attributesContains(logRecord: LogRecord, key: Key, value: AnyValue): Boolean {
-    val record = logRecord as? InMemoryLogRecord ?: return false
-    return record.attributes[key] == value
-}
-
-public fun createTracingSubscriber(loggerProvider: LoggerProvider): OpenTelemetryTracingBridge {
-    return OpenTelemetryTracingBridge.new(loggerProvider)
 }
 
 class LayerTest {
@@ -74,14 +76,14 @@ class LayerTest {
         assertEquals("my-system", log.target)
         assertEquals("my-event-name", log.eventName)
         assertNull(log.traceContext)
-        assertEquals(AnyValue.Text("This is an example message"), log.body)
-        assertTrue(attributesContains(log, Key("event_id"), AnyValue.Integer(20)))
-        assertTrue(attributesContains(log, Key("bytes"), AnyValue.Bytes(listOf(97, 98, 99))))
-        assertTrue(attributesContains(log, Key("exception.message"), AnyValue.Text("already shutdown")))
-        assertTrue(attributesContains(log, Key("small_u64value"), AnyValue.Integer(42)))
-        assertTrue(attributesContains(log, Key("big_u64value"), AnyValue.Text(ULong.MAX_VALUE.toString())))
-        assertTrue(attributesContains(log, Key("user_name"), AnyValue.Text("otel")))
-        assertTrue(attributesContains(log, Key("user_email"), AnyValue.Text("otel@opentelemetry.io")))
+        assertEquals(AnyValue.of("This is an example message"), log.body)
+        assertTrue(attributesContains(log, Key.new("event_id"), AnyValue.of(20L)))
+        assertTrue(attributesContains(log, Key.new("bytes"), AnyValue.of(byteArrayOf(97, 98, 99))))
+        assertTrue(attributesContains(log, Key.new("exception.message"), AnyValue.of("already shutdown")))
+        assertTrue(attributesContains(log, Key.new("small_u64value"), AnyValue.of(42L)))
+        assertTrue(attributesContains(log, Key.new("big_u64value"), AnyValue.of(ULong.MAX_VALUE.toString())))
+        assertTrue(attributesContains(log, Key.new("user_name"), AnyValue.of("otel")))
+        assertTrue(attributesContains(log, Key.new("user_email"), AnyValue.of("otel@opentelemetry.io")))
     }
 
     @Test
@@ -104,8 +106,8 @@ class LayerTest {
         val bridge = createTracingSubscriber(provider)
         assertNotNull(bridge)
 
-        val expectedTraceId = "4bf92f3577b34da6a3ce929d0e0e4736"
-        val expectedSpanId = "00f067aa0ba902b7"
+        val expectedTraceId = TraceId.fromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+        val expectedSpanId = SpanId.fromHex("00f067aa0ba902b7")
 
         val event =
             TracingEvent(
@@ -125,7 +127,7 @@ class LayerTest {
         logRecord.setEventName("my-event-name")
         logRecord.setSeverityNumber(Severity.Error)
         logRecord.setSeverityText("ERROR")
-        logRecord.setTraceContext(expectedTraceId, expectedSpanId, "01")
+        logRecord.setTraceContext(expectedTraceId, expectedSpanId, TraceFlags.SAMPLED)
         event.record(EventVisitor(logRecord))
         provider.logger("").emit(logRecord)
 
@@ -136,9 +138,9 @@ class LayerTest {
         assertNotNull(log.traceContext)
         assertEquals(expectedTraceId, log.traceContext?.traceId)
         assertEquals(expectedSpanId, log.traceContext?.spanId)
-        assertTrue(attributesContains(log, Key("event_id"), AnyValue.Integer(20)))
-        assertTrue(attributesContains(log, Key("user_name"), AnyValue.Text("otel")))
-        assertTrue(attributesContains(log, Key("user_email"), AnyValue.Text("otel@opentelemetry.io")))
+        assertTrue(attributesContains(log, Key.new("event_id"), AnyValue.of(20L)))
+        assertTrue(attributesContains(log, Key.new("user_name"), AnyValue.of("otel")))
+        assertTrue(attributesContains(log, Key.new("user_email"), AnyValue.of("otel@opentelemetry.io")))
     }
 
     @Test
@@ -147,20 +149,20 @@ class LayerTest {
         val bridge = createTracingSubscriber(provider)
         assertNotNull(bridge)
 
-        val traceId = "12345678901234567890123456789012"
-        val outerSpanId = "1111111111111111"
-        val innerSpanId = "2222222222222222"
+        val traceId = TraceId.fromHex("12345678901234567890123456789012")
+        val outerSpanId = SpanId.fromHex("1111111111111111")
+        val innerSpanId = SpanId.fromHex("2222222222222222")
 
         val record1 = provider.logger("").createLogRecord()
         record1.setSeverityNumber(Severity.Error)
-        record1.setTraceContext(traceId, outerSpanId, "01")
-        record1.setBody(AnyValue.Text("first-event"))
+        record1.setTraceContext(traceId, outerSpanId, TraceFlags.SAMPLED)
+        record1.setBody(AnyValue.of("first-event"))
         provider.logger("").emit(record1)
 
         val record2 = provider.logger("").createLogRecord()
         record2.setSeverityNumber(Severity.Error)
-        record2.setTraceContext(traceId, innerSpanId, "01")
-        record2.setBody(AnyValue.Text("second-event"))
+        record2.setTraceContext(traceId, innerSpanId, TraceFlags.SAMPLED)
+        record2.setBody(AnyValue.of("second-event"))
         provider.logger("").emit(record2)
 
         assertEquals(2, provider.exported.size)
@@ -181,7 +183,7 @@ class LayerTest {
         logRecord.setEventName("log event")
         logRecord.setSeverityNumber(Severity.Error)
         logRecord.setSeverityText("ERROR")
-        logRecord.setBody(AnyValue.Text("log from log crate"))
+        logRecord.setBody(AnyValue.of("log from log crate"))
         provider.logger("").emit(logRecord)
 
         val log = provider.exported.single()
@@ -189,7 +191,7 @@ class LayerTest {
         assertEquals("log", log.target)
         assertEquals("log event", log.eventName)
         assertNull(log.traceContext)
-        assertEquals(AnyValue.Text("log from log crate"), log.body)
+        assertEquals(AnyValue.of("log from log crate"), log.body)
     }
 
     @Test
@@ -198,14 +200,14 @@ class LayerTest {
         val bridge = createTracingSubscriber(provider)
         assertNotNull(bridge)
 
-        val expectedTraceId = "trace001"
-        val expectedSpanId = "span001"
+        val expectedTraceId = TraceId.fromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+        val expectedSpanId = SpanId.fromHex("00f067aa0ba902b7")
 
         val logRecord = provider.logger("").createLogRecord()
         logRecord.setTarget("my-system")
         logRecord.setSeverityNumber(Severity.Error)
-        logRecord.setTraceContext(expectedTraceId, expectedSpanId, "01")
-        logRecord.setBody(AnyValue.Text("log from log crate"))
+        logRecord.setTraceContext(expectedTraceId, expectedSpanId, TraceFlags.SAMPLED)
+        logRecord.setBody(AnyValue.of("log from log crate"))
         provider.logger("").emit(logRecord)
 
         val log = provider.exported.single()
@@ -236,8 +238,8 @@ public class InMemoryLoggerProvider(
     val scopeNames: MutableList<String> = mutableListOf()
     private val logger = InMemoryLogger(exported, enabled)
 
-    override fun logger(scopeName: String): Logger {
-        scopeNames += scopeName
+    override fun loggerWithScope(scope: InstrumentationScope): Logger {
+        scopeNames += scope.name()
         return logger
     }
 }
@@ -249,7 +251,7 @@ public class InMemoryLogger(
     override fun createLogRecord(): LogRecord = InMemoryLogRecord()
 
     override fun eventEnabled(
-        severity: Severity,
+        level: Severity,
         target: String,
         name: String?,
     ): Boolean = enabled
@@ -262,6 +264,7 @@ public class InMemoryLogger(
 public class InMemoryLogRecord : LogRecord, RecordAttributeLookup {
     override fun containsAttribute(key: Key, value: AnyValue): Boolean =
         attributes[key] == value
+
     var body: AnyValue? = null
         private set
     val attributes: LinkedHashMap<Key, AnyValue> = linkedMapOf()
@@ -269,15 +272,25 @@ public class InMemoryLogRecord : LogRecord, RecordAttributeLookup {
         private set
     var eventName: String? = null
         private set
+    var timestamp: Instant? = null
+        private set
+    var observedTimestamp: Instant? = null
+        private set
     var severityNumber: Severity? = null
         private set
     var severityText: String? = null
         private set
-    var traceContext: TraceContext? = null
+    var traceContext: TracingSpanContext? = null
         private set
 
-    override fun setBody(value: AnyValue) {
-        body = value
+    override fun setBody(body: AnyValue) {
+        this.body = body
+    }
+
+    override fun addAttributes(attributes: Iterable<Pair<Key, AnyValue>>) {
+        for ((k, v) in attributes) {
+            this.attributes[k] = v
+        }
     }
 
     override fun addAttribute(
@@ -295,8 +308,16 @@ public class InMemoryLogRecord : LogRecord, RecordAttributeLookup {
         eventName = name
     }
 
-    override fun setSeverityNumber(severity: Severity) {
-        severityNumber = severity
+    override fun setTimestamp(timestamp: Instant) {
+        this.timestamp = timestamp
+    }
+
+    override fun setObservedTimestamp(timestamp: Instant) {
+        this.observedTimestamp = timestamp
+    }
+
+    override fun setSeverityNumber(number: Severity) {
+        severityNumber = number
     }
 
     override fun setSeverityText(text: String) {
@@ -304,10 +325,10 @@ public class InMemoryLogRecord : LogRecord, RecordAttributeLookup {
     }
 
     override fun setTraceContext(
-        traceId: String,
-        spanId: String,
-        traceFlags: String?,
+        traceId: TraceId,
+        spanId: SpanId,
+        traceFlags: TraceFlags?,
     ) {
-        traceContext = TraceContext(traceId, spanId, traceFlags)
+        traceContext = TracingSpanContext(traceId, spanId, traceFlags)
     }
 }
